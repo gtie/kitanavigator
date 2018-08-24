@@ -1,0 +1,196 @@
+ <!DOCTYPE html>
+ <html>
+	<head>
+		<title>Kitas in Berlin</title>
+
+	    <script src="https://xyz.api.here.com/maps/latest/playground/../xyz-maps-common.min.js" type="text/javascript" charset="UTF-8" ></script>
+	    <script src="https://xyz.api.here.com/maps/latest/playground/../xyz-maps-core.min.js" type="text/javascript" charset="UTF-8" ></script>
+	    <script src="https://xyz.api.here.com/maps/latest/playground/../xyz-maps-display.min.js" type="text/javascript" charset="UTF-8" ></script>
+	    <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+
+
+ 		<style type="text/css">
+			#map {
+				position: absolute;
+            	overflow: hidden;
+				top: 0;
+				left: 0;
+				width: 100%;
+                height: 100%;
+			}
+			.titel {
+				font-weight: bold;
+			}
+
+			input {
+				position: relative;
+			    display: inline-block;
+			    margin: 7px 0 7px 0;
+				left: 20px;
+				z-index: 2;
+				width: 200px;
+				height: 22px;
+			}
+
+			pre div, span div {
+				position: relative;
+			    display: inline-block;
+				left: 20px;
+			    background-color: #373D49;
+			    color: #FFFFFF;
+			    padding: 10px;
+			    margin: 0 0 0 0;
+			    font-family: 'LFira Sans',Arial,Helvetica,sans-serif;
+			}
+
+			pre .properties{
+			    max-width: 50%;
+			    overflow-x: auto;
+			}
+
+			a.button {
+				position: relative;
+			    display: block;
+			    color: #FFFFFF;
+			    cursor: pointer;
+				left: 20px;
+			    height: 23px;
+			    padding: 5px 6px 0px;
+			    width: 120px;
+			    text-align: center;
+			    margin: 12px 0 0 0;
+			    background-color: #00afaa;
+			}
+			a.button:hover{
+			    background-color: #212429;
+			}
+
+ 		</style>
+	</head>
+	<body>
+		<div id="map"></div>
+		<pre><div id="info" class="w3-card w3-dark-grey">Click on a Kita. Green circle for Kitas with free spots!</div></pre>
+
+		<script type="application/javascript">
+	      	var YOUR_ACCESS_TOKEN = 'g-EZA7ceZx5q4hQrwtLdfA';
+			var styleGroups = {
+                kfree: [
+                    {zIndex:0, type:"Circle", radius:8, fill:"#33FFC7"},
+                ],
+                knonfree: [
+                    {zIndex:1, type:"Circle", radius:6, fill:"#FF7D33"},
+                ]
+            }         
+			var layers = [
+				new here.xyz.maps.layers.TileLayer({
+        			name: 'Image Layer',
+                    min: 13,
+                    max: 20,
+                    provider: new here.xyz.maps.providers.ImageProvider({
+			            name: 'Live Map',
+			            url : 'https://{SUBDOMAIN_INT_1_4}.mapcreator.tilehub.api.here.com/tilehub/wv_livemap_bc/png/sat/256/{QUADKEY}?access_token='+YOUR_ACCESS_TOKEN
+			        })
+				}),
+				new here.xyz.maps.layers.TileLayer({
+        			name: 'FreeKitas2018',
+                    min: 13,
+                    max: 20,
+                    provider: new here.xyz.maps.providers.SpaceProvider ({
+						name:  'SpaceProvider',
+						level: 14,
+						space: 'Jh3l7q4Q',
+						credentials: {
+							access_token: YOUR_ACCESS_TOKEN
+						},
+					}),
+                  style: {
+                    styleGroups: styleGroups,
+                    assign: function(feature, zoomlevel){ return "kfree";}
+                  }
+				}),
+				new here.xyz.maps.layers.TileLayer({
+        			name: 'FullKitas2018',
+                    min: 13,
+                    max: 20,
+                    provider: new here.xyz.maps.providers.SpaceProvider ({
+						name:  'SpaceProvider',
+						level: 14,
+						space: 'jgZoZ0Zu',
+						credentials: {
+							access_token: YOUR_ACCESS_TOKEN
+						}
+					}),
+                    style: {
+                      styleGroups: styleGroups,
+                      assign: function(feature, zoomlevel){ return "knonfree";}
+                    }
+				})
+			]
+			// setup the Map Display
+			window.display = new  here.xyz.maps.Map( document.getElementById("map"), {
+			    zoomLevel : 14,
+			    center: {
+			        longitude: 13.39636, latitude:  52.52506
+			    },
+
+			    // add layers to display
+			    layers: layers
+			});
+
+
+var infoTag = document.querySelector("#info");
+/*###visiblesource*/
+// create a event handler to pointerup
+function eventHandler(evt){
+	// Handle style update when clicking on a feature
+	if(evt.target){
+		// reset style of last clicked feature
+		if(clickedDetail)
+			clickedDetail.layer.setStyleGroup(clickedDetail.feature);
+
+		var bbox = evt.target.bbox;
+		// set map center
+		// display.setCenter((bbox[0]+bbox[2])/2, (bbox[1]+bbox[3])/2);
+
+		clickedDetail = evt.detail;
+		// highlight clicked feature
+		clickedDetail.layer.setStyleGroup(
+			evt.target,
+			clickFeatureStyle[evt.target.geometry.type]
+		);
+	}
+  
+  	if(evt.target){
+		var properties = evt.target.properties;
+
+		// Display feature user properties
+        var propertiesTxt = JSON.stringify(properties, undefined, 4);
+		infoTag.innerHTML = `
+         <header class="w3-container w3-light-grey"><h3>${properties.Name}<h3></header>
+         <p class="w3-left">
+           <span>Address: ${properties.Address}</span><br />
+           <span>Telephone: ${properties.Telephone}</span><br />
+           <span><a href="${properties.URL}" target="_blank">Visit Kita Page</a><span>
+        </p>
+`;
+	}
+	// Feature is not clicked
+	else {
+		infoTag.innerText = "Click on a Kita. Green circle for Kitas with free spots!";
+	}
+}
+
+// add event listener to pointerup
+display.addEventListener('pointerup', eventHandler);
+
+var clickedDetail;
+var clickFeatureStyle = {
+	Point: [
+    	{zIndex: 2, type: "Circle", radius:9, strokeWidth:2, "stroke": "#FFFFFF", "fill": "#FFE633"}
+    ]
+}
+/*visiblesource###*/
+		</script>
+
+	</body>
+</html>
